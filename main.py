@@ -71,14 +71,14 @@ class Button:
         self.roundness = 0.5
         self.width = 125
         self.height = 125
-        self.color = fade(RAYWHITE, 0.50)
+        self.color = fade(RAYWHITE, 0.5)
         self.hovered_color = WHITE
         self.text_color = MATTE_BLACK
         self.font = font
         self.font_size = 70
 
 
-    def draw(self):
+    def draw(self, is_shriking = False, is_expanding = False):
 
         rec = Rectangle(self.position.x, self.position.y, self.width, self.height)
         draw_rectangle_rounded(rec, self.roundness, 0, self.hovered_color if self.is_hovered() else self.color)
@@ -86,7 +86,10 @@ class Button:
         text_size = measure_text_ex(self.font, self.text, self.font_size, 0)
         text_x = self.position.x + (self.width - text_size.x) / 2
         text_y = self.position.y + (self.height - text_size.y) / 2
-        draw_text_ex(self.font, self.text, Vector2(text_x, text_y), self.font_size, 0, self.text_color)
+        if self.text == "/" and not is_shriking and not is_expanding:
+            draw_text("÷", int(text_x - 4), int(text_y + 1), self.font_size, self.text_color)
+        elif not is_shriking and not is_expanding: 
+            draw_text_ex(self.font, self.text, Vector2(text_x, text_y), self.font_size, 0, self.text_color)
 
 
     def is_hovered(self):
@@ -126,33 +129,75 @@ class Window:
         set_shader_value(self.shader, get_shader_location(self.shader, b"resolution"), resolution_ptr, ShaderUniformDataType.SHADER_UNIFORM_VEC2)   
 
         self.font = load_font_ex("Poppins-SemiBold.ttf", 320, None, 0)
+        self.fontItalic = load_font_ex("Poppins-SemiBoldItalic.ttf", 320, None, 0)
 
         self.buttons = {
-            "button1": Button(Vector2(88, 400), "1", self.font),
-            "button2": Button(Vector2(238, 400), "2", self.font),
-            "button3": Button(Vector2(388, 400), "3", self.font),
-            "button4": Button(Vector2(88, 550), "4", self.font),
-            "button5": Button(Vector2(238, 550), "5", self.font),
-            "button6": Button(Vector2(388, 550), "6", self.font),
-            "button7": Button(Vector2(88, 700), "7", self.font),
-            "button8": Button(Vector2(238, 700), "8", self.font),
-            "button9": Button(Vector2(388, 700), "9", self.font),
-            "button10": Button(Vector2(238, 850), "0", self.font),
-            "button11": Button(Vector2(538, 400), "+", self.font),
-            "button12": Button(Vector2(538, 550), "-", self.font),
-            # Add more as needed
+            1 : Button(Vector2(88, 500), "1", self.font),
+            2 : Button(Vector2(238, 500), "2", self.font),
+            3 : Button(Vector2(388, 500), "3", self.font),
+            4 : Button(Vector2(88, 650), "4", self.font),
+            5 : Button(Vector2(238, 650), "5", self.font),
+            6 : Button(Vector2(388, 650), "6", self.font),
+            7 : Button(Vector2(88, 800), "7", self.font),
+            8 : Button(Vector2(238, 800), "8", self.font),
+            9 : Button(Vector2(388, 800), "9", self.font),
+            0 : Button(Vector2(238, 950), "0", self.font),
+            "(" : Button(Vector2(88, 350), "("  , self.font),
+            ")" : Button(Vector2(238, 350), ")"  , self.font),
+            "^" : Button(Vector2(388, 350), "^"  , self.font),
+            "/" : Button(Vector2(538, 350), "/"  , self.font),
+            "*" : Button(Vector2(538, 500), "x", self.font),
+            "-" : Button(Vector2(538, 650), "-", self.font),
+            "+" : Button(Vector2(538, 800), "+", self.font),
+            "C" : Button(Vector2(388, 950), "C", self.font),
         }
 
+        # special buttons
+        self.more_button = Button(Vector2(88, 950), "...", self.font)
+        self.equal_button = Button(Vector2(538, 950), "=", self.font)
 
+        self.equal_button.color = fade(GOLDEN_YELLOW, 0.5)
+
+        # buttons flipping animation
+        self.is_buttons_shriking = False
+        self.is_buttons_expanding = False
 
     def draw_contents(self):
        
         draw_rectangle_rounded(Rectangle(50, 75, 650, 1050), 0.1, 0, fade(RAYWHITE, 0.45))
 
-        for button in self.buttons.values():
-            button.draw()
+        for key, button in self.buttons.items():
+            if button.is_clicked():
+                match key:
+                    case "...":
+                        pass
 
+            button.draw(self.is_buttons_shriking, self.is_buttons_expanding)
 
+        self.more_button.draw()
+        self.equal_button.draw()
+
+        if self.more_button.is_clicked():
+            if not self.is_buttons_shriking and not self.is_buttons_expanding:
+                self.is_buttons_shriking = True
+
+        # buttons flipping animation
+        if self.is_buttons_shriking and not self.is_buttons_expanding:
+            for button in self.buttons.values():
+                button.width -= int(1000 * get_frame_time())
+                button.position.x += int(500 * get_frame_time())
+
+        if all(button.width <= 0 for button in self.buttons.values()) and not self.is_buttons_expanding:
+            self.is_buttons_shriking = False
+            self.is_buttons_expanding = True
+
+        if self.is_buttons_expanding and not self.is_buttons_shriking:
+            for button in self.buttons.values():
+                button.width += int(1000 * get_frame_time())
+                button.position.x -= int(500 * get_frame_time())
+
+        if all(button.width >= 125 for button in self.buttons.values()) and not self.is_buttons_shriking:
+            self.is_buttons_expanding = False
 
 
     def run(self):
