@@ -2,7 +2,8 @@ import os
 from pyray import *
 from raylib import ffi
 
-
+from font_hex import font_hex
+from font_hex_italic import font_hex_italic
 
 vertex_shader_code = """
 #version 330
@@ -75,7 +76,7 @@ class Button:
         self.hovered_color = WHITE
         self.text_color = MATTE_BLACK
         self.font = font
-        self.font_size = 70
+        self.font_size = 60
 
 
     def draw(self, is_shriking = False, is_expanding = False):
@@ -102,7 +103,10 @@ class Button:
 
         return is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT) and self.is_hovered()
 
+BUTTONS_FLIPPING_SPEED = 750
 
+font_data = bytes(font_hex)
+font_data_italic = bytes(font_hex_italic)
 
 class Window:
 
@@ -128,28 +132,56 @@ class Window:
         resolution_ptr = ffi.new("float[2]", resolution)
         set_shader_value(self.shader, get_shader_location(self.shader, b"resolution"), resolution_ptr, ShaderUniformDataType.SHADER_UNIFORM_VEC2)   
 
-        self.font = load_font_ex("Poppins-SemiBold.ttf", 320, None, 0)
-        self.fontItalic = load_font_ex("Poppins-SemiBoldItalic.ttf", 320, None, 0)
+        # self.font = load_font_ex("Poppins-SemiBold.ttf", 320, None, 0)
+        self.font = load_font_from_memory(".ttf", font_data, len(font_data), 320, None, 0)
+        # self.fontItalic = load_font_ex("Poppins-SemiBoldItalic.ttf", 320, None, 0)
+        self.fontItalic = load_font_from_memory(".ttf", font_data_italic, len(font_data_italic), 320, None, 0)
 
         self.buttons = {
-            1 : Button(Vector2(88, 500), "1", self.font),
-            2 : Button(Vector2(238, 500), "2", self.font),
-            3 : Button(Vector2(388, 500), "3", self.font),
-            4 : Button(Vector2(88, 650), "4", self.font),
-            5 : Button(Vector2(238, 650), "5", self.font),
-            6 : Button(Vector2(388, 650), "6", self.font),
-            7 : Button(Vector2(88, 800), "7", self.font),
-            8 : Button(Vector2(238, 800), "8", self.font),
-            9 : Button(Vector2(388, 800), "9", self.font),
-            0 : Button(Vector2(238, 950), "0", self.font),
-            "(" : Button(Vector2(88, 350), "("  , self.font),
-            ")" : Button(Vector2(238, 350), ")"  , self.font),
-            "^" : Button(Vector2(388, 350), "^"  , self.font),
-            "/" : Button(Vector2(538, 350), "/"  , self.font),
-            "*" : Button(Vector2(538, 500), "x", self.font),
+            "1" : Button(Vector2(88, 500), "1", self.font),
+            "2" : Button(Vector2(238, 500), "2", self.font),
+            "3" : Button(Vector2(388, 500), "3", self.font),
+            "4" : Button(Vector2(88, 650), "4", self.font),
+            "5" : Button(Vector2(238, 650), "5", self.font),
+            "6" : Button(Vector2(388, 650), "6", self.font),
+            "7" : Button(Vector2(88, 800), "7", self.font),
+            "8" : Button(Vector2(238, 800), "8", self.font),
+            "9" : Button(Vector2(388, 800), "9", self.font),
+            "0" : Button(Vector2(238, 950), "0", self.font),
+            "^B" : Button(Vector2(88, 350), "^B", self.font),
+            "^2" : Button(Vector2(238, 350), "^2", self.font),
+            "Del" : Button(Vector2(388, 350), "Del", self.font),
+            "/" : Button(Vector2(538, 350), "/", self.font),
+            "x" : Button(Vector2(538, 500), "x", self.font),
             "-" : Button(Vector2(538, 650), "-", self.font),
             "+" : Button(Vector2(538, 800), "+", self.font),
             "C" : Button(Vector2(388, 950), "C", self.font),
+        }
+
+        self.next_buttons = {
+            "(" : Button(Vector2(88, 350), "(", self.fontItalic),
+            ")" : Button(Vector2(238, 350), ")", self.fontItalic),
+            ":))" : Button(Vector2(388, 350), ":))", self.fontItalic),
+            ":((" : Button(Vector2(538, 350), ":((", self.fontItalic),
+
+            "sin" : Button(Vector2(88, 500), "sin", self.fontItalic),
+            "cos" : Button(Vector2(238, 500), "cos", self.fontItalic),
+            "tan" : Button(Vector2(388, 500), "tan", self.fontItalic),
+
+            "cot" : Button(Vector2(88, 650), "cot", self.fontItalic),
+            "sec" : Button(Vector2(238, 650), "sec", self.fontItalic),
+            "csec" : Button(Vector2(388, 650), "csec", self.fontItalic),
+
+            "ln" : Button(Vector2(88, 800), "ln", self.fontItalic),
+            "log" : Button(Vector2(238, 800), "log", self.fontItalic),
+            "exp" : Button(Vector2(388, 800), "exp", self.fontItalic),
+
+            "pi" : Button(Vector2(538, 500), "pi", self.font),
+            "e" : Button(Vector2(538, 650), "e", self.font),
+            "sqrt" : Button(Vector2(538, 800), "sqrt", self.font),
+
+            "x" : Button(Vector2(238, 950), "x", self.fontItalic),
+            "y" : Button(Vector2(388, 950), "y", self.fontItalic),
         }
 
         # special buttons
@@ -162,17 +194,59 @@ class Window:
         self.is_buttons_shriking = False
         self.is_buttons_expanding = False
 
+        self.in_base_page = True
+
     def draw_contents(self):
        
         draw_rectangle_rounded(Rectangle(50, 75, 650, 1050), 0.1, 0, fade(RAYWHITE, 0.45))
 
-        for key, button in self.buttons.items():
-            if button.is_clicked():
-                match key:
-                    case "...":
-                        pass
+        if self.in_base_page:
+            for key, button in self.buttons.items():
+                if button.is_clicked():
+                    match key:
+                        case "...":
+                            pass
+                            
+                button.draw(self.is_buttons_shriking, self.is_buttons_expanding)
 
-            button.draw(self.is_buttons_shriking, self.is_buttons_expanding)
+            # buttons flipping animation
+            if all(button.width <= 0 for button in self.buttons.values()) and not self.is_buttons_expanding:
+                self.is_buttons_shriking = False
+                self.is_buttons_expanding = True
+
+            if all(button.width >= 125 for button in self.buttons.values()) and not self.is_buttons_shriking and self.is_buttons_expanding:
+                self.is_buttons_expanding = False
+                self.in_base_page = not self.in_base_page
+
+        else:
+            for key, button in self.next_buttons.items():
+                if button.is_clicked():
+                    match key:
+                        case "...":
+                            pass
+
+                button.draw(self.is_buttons_shriking, self.is_buttons_expanding)
+
+            # buttons flipping animation too
+            if all(button.width <= 0 for button in self.next_buttons.values()) and not self.is_buttons_expanding:
+                self.is_buttons_shriking = False
+                self.is_buttons_expanding = True
+
+            if all(button.width >= 125 for button in self.next_buttons.values()) and not self.is_buttons_shriking and self.is_buttons_expanding:
+                self.is_buttons_expanding = False
+                self.in_base_page = not self.in_base_page
+
+        # buttons flipping animation too too
+        if self.is_buttons_shriking and not self.is_buttons_expanding:
+            for button in self.buttons.values() if self.in_base_page else self.next_buttons.values():
+                button.width -= int(BUTTONS_FLIPPING_SPEED * get_frame_time())
+                button.position.x += int(BUTTONS_FLIPPING_SPEED / 2 * get_frame_time())
+
+        if self.is_buttons_expanding and not self.is_buttons_shriking:
+            for button in self.buttons.values() if self.in_base_page else self.next_buttons.values(): 
+                button.width += int(BUTTONS_FLIPPING_SPEED * get_frame_time())
+                button.position.x -= int(BUTTONS_FLIPPING_SPEED / 2 * get_frame_time())
+
 
         self.more_button.draw()
         self.equal_button.draw()
@@ -180,24 +254,6 @@ class Window:
         if self.more_button.is_clicked():
             if not self.is_buttons_shriking and not self.is_buttons_expanding:
                 self.is_buttons_shriking = True
-
-        # buttons flipping animation
-        if self.is_buttons_shriking and not self.is_buttons_expanding:
-            for button in self.buttons.values():
-                button.width -= int(1000 * get_frame_time())
-                button.position.x += int(500 * get_frame_time())
-
-        if all(button.width <= 0 for button in self.buttons.values()) and not self.is_buttons_expanding:
-            self.is_buttons_shriking = False
-            self.is_buttons_expanding = True
-
-        if self.is_buttons_expanding and not self.is_buttons_shriking:
-            for button in self.buttons.values():
-                button.width += int(1000 * get_frame_time())
-                button.position.x -= int(500 * get_frame_time())
-
-        if all(button.width >= 125 for button in self.buttons.values()) and not self.is_buttons_shriking:
-            self.is_buttons_expanding = False
 
 
     def run(self):
