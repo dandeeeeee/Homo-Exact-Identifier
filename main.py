@@ -61,6 +61,7 @@ MATTE_BLACK = Color(51, 51, 51, 255)
 GOLDEN_YELLOW = Color(255, 223, 0, 255)
 
 
+HOVERED_REC_EXPAND_SPEED = 700
 
 
 class Button:
@@ -68,40 +69,82 @@ class Button:
     def __init__(self, pos: Vector2, text: str, font: Font):
 
         self.position = pos
+        self.original_position = Vector2(pos.x, pos.y)  # save original position
         self.text = text
-        self.roundness = 0.5
+        self.roundness = 1
         self.width = 125
         self.height = 125
+        self.original_width = self.width  # save original width
+        self.original_height = self.height  # save original height
         self.color = fade(RAYWHITE, 0.5)
         self.hovered_color = WHITE
         self.text_color = MATTE_BLACK
         self.font = font
         self.font_size = 60
 
+        self.hovered_size = Vector2(1, 1)
+        self.hovered_pos = Vector2((self.position.x + self.width / 2), (self.position.y + self.height / 2))
 
-    def draw(self, is_shriking = False, is_expanding = False):
+        self.is_being_clicked = False  # tracks clicking state
 
-        rec = Rectangle(self.position.x, self.position.y, self.width, self.height)
-        draw_rectangle_rounded(rec, self.roundness, 0, self.hovered_color if self.is_hovered() else self.color)
+    def draw(self, is_shrinking=False, is_expanding=False):
+        # save current size and position for animations
+        current_width = self.width
+        current_height = self.height
+        current_position = Vector2(self.position.x, self.position.y)
+
+        # adjust size and position for clicking effect
+        if self.is_clicked():
+            self.is_being_clicked = True
+            current_width = 115
+            current_height = 115
+            current_position.x = self.position.x + (self.width - current_width) / 2
+            current_position.y = self.position.y + (self.height - current_height) / 2
+        else:
+            self.is_being_clicked = False
+
+        rec = Rectangle(current_position.x, current_position.y, current_width, current_height)
+        draw_rectangle_rounded(rec, self.roundness, 0, self.color)
+
+        # adjust hover effect size and position to match the button's current state
+        hover_width = self.hovered_size.x if not self.is_being_clicked else current_width
+        hover_height = self.hovered_size.y if not self.is_being_clicked else current_height
+        hover_x = self.hovered_pos.x if not self.is_being_clicked else current_position.x + (current_width - hover_width) / 2
+        hover_y = self.hovered_pos.y if not self.is_being_clicked else current_position.y + (current_height - hover_height) / 2
+
+        # keep the hover effect active even when clicked
+        if self.is_hovered() or self.is_being_clicked:
+            draw_rectangle_rounded(Rectangle(hover_x, hover_y, hover_width, hover_height), self.roundness, 0, self.hovered_color)
+            if not self.is_being_clicked:
+                self.hovered_size = vector2_add(self.hovered_size, vector2_scale(Vector2(HOVERED_REC_EXPAND_SPEED, HOVERED_REC_EXPAND_SPEED), get_frame_time()))
+                self.hovered_size = vector2_clamp(self.hovered_size, Vector2(1, 1), Vector2(125, 125))
+                self.hovered_pos = vector2_subtract(self.hovered_pos, vector2_scale(Vector2(HOVERED_REC_EXPAND_SPEED / 2, HOVERED_REC_EXPAND_SPEED / 2), get_frame_time()))
+                self.hovered_pos = vector2_clamp(self.hovered_pos, self.position, Vector2(self.position.x + self.width / 2, self.position.y + self.height / 2))
+        else:
+            self.hovered_size = vector2_subtract(self.hovered_size, vector2_scale(Vector2(HOVERED_REC_EXPAND_SPEED, HOVERED_REC_EXPAND_SPEED), get_frame_time()))
+            self.hovered_size = vector2_clamp(self.hovered_size, Vector2(1, 1), Vector2(125, 125))
+            self.hovered_pos = vector2_add(self.hovered_pos, vector2_scale(Vector2(HOVERED_REC_EXPAND_SPEED / 2, HOVERED_REC_EXPAND_SPEED / 2), get_frame_time()))
+            self.hovered_pos = vector2_clamp(self.hovered_pos, self.position, Vector2(self.position.x + self.width / 2, self.position.y + self.height / 2))
 
         text_size = measure_text_ex(self.font, self.text, self.font_size, 0)
-        text_x = self.position.x + (self.width - text_size.x) / 2
-        text_y = self.position.y + (self.height - text_size.y) / 2
-        if self.text == "/" and not is_shriking and not is_expanding:
+        text_x = current_position.x + (current_width - text_size.x) / 2
+        text_y = current_position.y + (current_height - text_size.y) / 2
+
+        if self.text == "/" and not is_shrinking and not is_expanding:
             draw_text("÷", int(text_x - 4), int(text_y + 1), self.font_size, self.text_color)
-        elif not is_shriking and not is_expanding: 
+        elif not is_shrinking and not is_expanding: 
             draw_text_ex(self.font, self.text, Vector2(text_x, text_y), self.font_size, 0, self.text_color)
 
-
     def is_hovered(self):
-
         mouse_pos = get_mouse_position()
         return check_collision_point_rec(mouse_pos, Rectangle(self.position.x, self.position.y, self.width, self.height))
 
-
     def is_clicked(self):
+        return is_mouse_button_down(MouseButton.MOUSE_BUTTON_LEFT) and self.is_hovered()
 
-        return is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT) and self.is_hovered()
+
+
+
 
 BUTTONS_FLIPPING_SPEED = 750
 
@@ -159,10 +202,10 @@ class Window:
         }
 
         self.next_buttons = {
-            "(" : Button(Vector2(88, 350), "(", self.fontItalic),
-            ")" : Button(Vector2(238, 350), ")", self.fontItalic),
-            ":))" : Button(Vector2(388, 350), ":))", self.fontItalic),
-            ":((" : Button(Vector2(538, 350), ":((", self.fontItalic),
+            "(" : Button(Vector2(88, 350), "(", self.font),
+            ")" : Button(Vector2(238, 350), ")", self.font),
+            "dx" : Button(Vector2(388, 350), "dx", self.fontItalic),
+            "dy" : Button(Vector2(538, 350), "dy", self.fontItalic),
 
             "sin" : Button(Vector2(88, 500), "sin", self.fontItalic),
             "cos" : Button(Vector2(238, 500), "cos", self.fontItalic),
@@ -198,7 +241,8 @@ class Window:
 
     def draw_contents(self):
        
-        draw_rectangle_rounded(Rectangle(50, 75, 650, 1050), 0.1, 0, fade(RAYWHITE, 0.45))
+        draw_rectangle_rounded(Rectangle(50, 75, 650, 1050), 0.1, 0, fade(MATTE_BLACK, 0.15))
+        # draw_rectangle_rounded(Rectangle(50, 75, 650, 1050), 0.1, 0, fade(RAYWHITE, 0.45))
 
         if self.in_base_page:
             for key, button in self.buttons.items():
