@@ -69,35 +69,38 @@ class Button:
     def __init__(self, pos: Vector2, text: str, font: Font):
 
         self.position = pos
-        self.original_position = Vector2(pos.x, pos.y)  # save original position
+        self.original_position = Vector2(pos.x, pos.y)  # Save original position
         self.text = text
         self.roundness = 1
         self.width = 125
         self.height = 125
-        self.original_width = self.width  # save original width
-        self.original_height = self.height  # save original height
+        self.original_width = self.width  # Save original width
+        self.original_height = self.height  # Save original height
         self.color = fade(RAYWHITE, 0.5)
         self.hovered_color = WHITE
         self.text_color = MATTE_BLACK
         self.font = font
         self.font_size = 60
+        self.original_font_size = self.font_size  # Save original font size
 
         self.hovered_size = Vector2(1, 1)
         self.hovered_pos = Vector2((self.position.x + self.width / 2), (self.position.y + self.height / 2))
 
-        self.is_being_clicked = False  # tracks clicking state
+        self.is_being_clicked = False  # Track clicking state
 
     def draw(self, is_shrinking=False, is_expanding=False):
-        # save current size and position for animations
+        # Save current size and position for animations
         current_width = self.width
         current_height = self.height
         current_position = Vector2(self.position.x, self.position.y)
+        current_font_size = self.font_size
 
-        # adjust size and position for clicking effect
+        # Adjust size, position, and font size for clicking effect
         if self.is_clicked():
             self.is_being_clicked = True
-            current_width = 115
-            current_height = 115
+            current_width = 120
+            current_height = 120
+            current_font_size = int(self.original_font_size * 0.9)  # Reduce font size by 10%
             current_position.x = self.position.x + (self.width - current_width) / 2
             current_position.y = self.position.y + (self.height - current_height) / 2
         else:
@@ -106,13 +109,13 @@ class Button:
         rec = Rectangle(current_position.x, current_position.y, current_width, current_height)
         draw_rectangle_rounded(rec, self.roundness, 0, self.color)
 
-        # adjust hover effect size and position to match the button's current state
+        # Adjust hover effect size and position to match the button's current state
         hover_width = self.hovered_size.x if not self.is_being_clicked else current_width
         hover_height = self.hovered_size.y if not self.is_being_clicked else current_height
         hover_x = self.hovered_pos.x if not self.is_being_clicked else current_position.x + (current_width - hover_width) / 2
         hover_y = self.hovered_pos.y if not self.is_being_clicked else current_position.y + (current_height - hover_height) / 2
 
-        # keep the hover effect active even when clicked
+        # Keep the hover effect active even when clicked
         if self.is_hovered() or self.is_being_clicked:
             draw_rectangle_rounded(Rectangle(hover_x, hover_y, hover_width, hover_height), self.roundness, 0, self.hovered_color)
             if not self.is_being_clicked:
@@ -126,14 +129,14 @@ class Button:
             self.hovered_pos = vector2_add(self.hovered_pos, vector2_scale(Vector2(HOVERED_REC_EXPAND_SPEED / 2, HOVERED_REC_EXPAND_SPEED / 2), get_frame_time()))
             self.hovered_pos = vector2_clamp(self.hovered_pos, self.position, Vector2(self.position.x + self.width / 2, self.position.y + self.height / 2))
 
-        text_size = measure_text_ex(self.font, self.text, self.font_size, 0)
+        text_size = measure_text_ex(self.font, self.text, current_font_size, 0)
         text_x = current_position.x + (current_width - text_size.x) / 2
         text_y = current_position.y + (current_height - text_size.y) / 2
 
         if self.text == "/" and not is_shrinking and not is_expanding:
-            draw_text("÷", int(text_x - 4), int(text_y + 1), self.font_size, self.text_color)
+            draw_text("÷", int(text_x - 4), int(text_y + 1), current_font_size, self.text_color)
         elif not is_shrinking and not is_expanding: 
-            draw_text_ex(self.font, self.text, Vector2(text_x, text_y), self.font_size, 0, self.text_color)
+            draw_text_ex(self.font, self.text, Vector2(text_x, text_y), current_font_size, 0, self.text_color)
 
     def is_hovered(self):
         mouse_pos = get_mouse_position()
@@ -141,6 +144,7 @@ class Button:
 
     def is_clicked(self):
         return is_mouse_button_down(MouseButton.MOUSE_BUTTON_LEFT) and self.is_hovered()
+
 
 
 
