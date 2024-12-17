@@ -5,6 +5,7 @@ from raylib import ffi
 from font_hex import font_hex
 from font_hex_italic import font_hex_italic
 
+
 vertex_shader_code = """
 #version 330
 
@@ -66,21 +67,21 @@ HOVERED_REC_EXPAND_SPEED = 700
 
 class Button:
 
-    def __init__(self, pos: Vector2, text: str, font: Font):
+    def __init__(self, pos: Vector2, text: str, font: Font, font_size: int = 60, width: int = 125, height: int = 125, roundness: int = 1):
 
         self.position = pos
         self.original_position = Vector2(pos.x, pos.y)  # Save original position
         self.text = text
-        self.roundness = 1
-        self.width = 125
-        self.height = 125
+        self.roundness = roundness
+        self.width = width
+        self.height = height
         self.original_width = self.width  # Save original width
         self.original_height = self.height  # Save original height
         self.color = fade(RAYWHITE, 0.5)
         self.hovered_color = WHITE
         self.text_color = MATTE_BLACK
         self.font = font
-        self.font_size = 60
+        self.font_size = font_size
         self.original_font_size = self.font_size  # Save original font size
 
         self.hovered_size = Vector2(1, 1)
@@ -88,19 +89,24 @@ class Button:
 
         self.is_being_clicked = False  # Track clicking state
 
+        self.is_active = False # for modes
+
     def draw(self, is_shrinking=False, is_expanding=False):
-        # Save current size and position for animations
         current_width = self.width
         current_height = self.height
         current_position = Vector2(self.position.x, self.position.y)
         current_font_size = self.font_size
 
-        # Adjust size, position, and font size for clicking effect
-        if self.is_clicked():
+        if (self.is_hovered() and is_mouse_button_down(MouseButton.MOUSE_BUTTON_LEFT)) or self.is_active:
             self.is_being_clicked = True
-            current_width = 120
-            current_height = 120
-            current_font_size = int(self.original_font_size * 0.9)  # Reduce font size by 10%
+            if not self.is_active: 
+                current_width = self.width - 5
+                current_height = self.height - 5
+                current_font_size = int(self.original_font_size * 0.9)  # Reduce font size by 10%
+            else:
+                current_width = self.width 
+                current_height = self.height 
+                current_font_size = self.original_font_size 
             current_position.x = self.position.x + (self.width - current_width) / 2
             current_position.y = self.position.y + (self.height - current_height) / 2
         else:
@@ -109,23 +115,21 @@ class Button:
         rec = Rectangle(current_position.x, current_position.y, current_width, current_height)
         draw_rectangle_rounded(rec, self.roundness, 0, self.color)
 
-        # Adjust hover effect size and position to match the button's current state
         hover_width = self.hovered_size.x if not self.is_being_clicked else current_width
         hover_height = self.hovered_size.y if not self.is_being_clicked else current_height
         hover_x = self.hovered_pos.x if not self.is_being_clicked else current_position.x + (current_width - hover_width) / 2
         hover_y = self.hovered_pos.y if not self.is_being_clicked else current_position.y + (current_height - hover_height) / 2
 
-        # Keep the hover effect active even when clicked
         if self.is_hovered() or self.is_being_clicked:
             draw_rectangle_rounded(Rectangle(hover_x, hover_y, hover_width, hover_height), self.roundness, 0, self.hovered_color)
             if not self.is_being_clicked:
                 self.hovered_size = vector2_add(self.hovered_size, vector2_scale(Vector2(HOVERED_REC_EXPAND_SPEED, HOVERED_REC_EXPAND_SPEED), get_frame_time()))
-                self.hovered_size = vector2_clamp(self.hovered_size, Vector2(1, 1), Vector2(125, 125))
+                self.hovered_size = vector2_clamp(self.hovered_size, Vector2(1, 1), Vector2(self.width, self.width))
                 self.hovered_pos = vector2_subtract(self.hovered_pos, vector2_scale(Vector2(HOVERED_REC_EXPAND_SPEED / 2, HOVERED_REC_EXPAND_SPEED / 2), get_frame_time()))
                 self.hovered_pos = vector2_clamp(self.hovered_pos, self.position, Vector2(self.position.x + self.width / 2, self.position.y + self.height / 2))
         else:
             self.hovered_size = vector2_subtract(self.hovered_size, vector2_scale(Vector2(HOVERED_REC_EXPAND_SPEED, HOVERED_REC_EXPAND_SPEED), get_frame_time()))
-            self.hovered_size = vector2_clamp(self.hovered_size, Vector2(1, 1), Vector2(125, 125))
+            self.hovered_size = vector2_clamp(self.hovered_size, Vector2(1, 1), Vector2(self.width, self.height))
             self.hovered_pos = vector2_add(self.hovered_pos, vector2_scale(Vector2(HOVERED_REC_EXPAND_SPEED / 2, HOVERED_REC_EXPAND_SPEED / 2), get_frame_time()))
             self.hovered_pos = vector2_clamp(self.hovered_pos, self.position, Vector2(self.position.x + self.width / 2, self.position.y + self.height / 2))
 
@@ -134,7 +138,7 @@ class Button:
         text_y = current_position.y + (current_height - text_size.y) / 2
 
         if self.text == "/" and not is_shrinking and not is_expanding:
-            draw_text("÷", int(text_x - 4), int(text_y + 1), current_font_size, self.text_color)
+            draw_text("÷", int(text_x - 3), int(text_y - 1), current_font_size + 15, self.text_color)
         elif not is_shrinking and not is_expanding: 
             draw_text_ex(self.font, self.text, Vector2(text_x, text_y), current_font_size, 0, self.text_color)
 
@@ -143,9 +147,7 @@ class Button:
         return check_collision_point_rec(mouse_pos, Rectangle(self.position.x, self.position.y, self.width, self.height))
 
     def is_clicked(self):
-        return is_mouse_button_down(MouseButton.MOUSE_BUTTON_LEFT) and self.is_hovered()
-
-
+        return is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT) and self.is_hovered()
 
 
 
@@ -166,6 +168,13 @@ class Window:
 
         self.target = load_render_texture(APP_WIDTH, APP_HEIGHT)
         set_texture_filter(self.target.texture, TextureFilter.TEXTURE_FILTER_BILINEAR)
+
+        self.camera = Camera2D(
+            Vector2(360, 240),
+            Vector2(360, 240),
+            0.0,
+            1.0
+        )
       
         with open("vertex_shader.glsl", "w") as f:
             f.write(vertex_shader_code)
@@ -179,10 +188,10 @@ class Window:
         resolution_ptr = ffi.new("float[2]", resolution)
         set_shader_value(self.shader, get_shader_location(self.shader, b"resolution"), resolution_ptr, ShaderUniformDataType.SHADER_UNIFORM_VEC2)   
 
-        # self.font = load_font_ex("Poppins-SemiBold.ttf", 320, None, 0)
-        self.font = load_font_from_memory(".ttf", font_data, len(font_data), 320, None, 0)
-        # self.fontItalic = load_font_ex("Poppins-SemiBoldItalic.ttf", 320, None, 0)
-        self.fontItalic = load_font_from_memory(".ttf", font_data_italic, len(font_data_italic), 320, None, 0)
+        self.font = load_font_ex("Cubano.ttf", 320, None, 0)
+        # self.font = load_font_from_memory(".ttf", font_data, len(font_data), 320, None, 0)
+        self.fontItalic = load_font_ex("Poppins-SemiBoldItalic.ttf", 320, None, 0)
+        # self.fontItalic = load_font_from_memory(".ttf", font_data_italic, len(font_data_italic), 320, None, 0)
 
         self.buttons = {
             "1" : Button(Vector2(88, 500), "1", self.font),
@@ -195,41 +204,54 @@ class Window:
             "8" : Button(Vector2(238, 800), "8", self.font),
             "9" : Button(Vector2(388, 800), "9", self.font),
             "0" : Button(Vector2(238, 950), "0", self.font),
-            "^B" : Button(Vector2(88, 350), "^B", self.font),
-            "^2" : Button(Vector2(238, 350), "^2", self.font),
-            "Del" : Button(Vector2(388, 350), "Del", self.font),
+            "DX" : Button(Vector2(88, 350), "DX", self.font, font_size=45),
+            "DY" : Button(Vector2(238, 350), "DY", self.font, font_size=45),
+            "Del" : Button(Vector2(388, 350), "Del", self.font, font_size=45),
             "/" : Button(Vector2(538, 350), "/", self.font),
-            "x" : Button(Vector2(538, 500), "x", self.font),
+            "*" : Button(Vector2(538, 500), "x", self.font, font_size=50),
             "-" : Button(Vector2(538, 650), "-", self.font),
             "+" : Button(Vector2(538, 800), "+", self.font),
             "C" : Button(Vector2(388, 950), "C", self.font),
         }
 
         self.next_buttons = {
-            "(" : Button(Vector2(88, 350), "(", self.font),
-            ")" : Button(Vector2(238, 350), ")", self.font),
-            "dx" : Button(Vector2(388, 350), "dx", self.fontItalic),
-            "dy" : Button(Vector2(538, 350), "dy", self.fontItalic),
+            "x" : Button(Vector2(88, 350), "x", self.font, font_size=45),
+            "y" : Button(Vector2(238, 350), "y", self.font, font_size=45),
+            "(" : Button(Vector2(388, 350), "(", self.font),
+            ")" : Button(Vector2(538, 350), ")", self.font),
 
-            "sin" : Button(Vector2(88, 500), "sin", self.fontItalic),
-            "cos" : Button(Vector2(238, 500), "cos", self.fontItalic),
-            "tan" : Button(Vector2(388, 500), "tan", self.fontItalic),
+            "sin" : Button(Vector2(88, 500), "sin", self.font, font_size=45),
+            "cos" : Button(Vector2(238, 500), "cos", self.font, font_size=45),
+            "tan" : Button(Vector2(388, 500), "tan", self.font, font_size=45),
 
-            "cot" : Button(Vector2(88, 650), "cot", self.fontItalic),
-            "sec" : Button(Vector2(238, 650), "sec", self.fontItalic),
-            "csec" : Button(Vector2(388, 650), "csec", self.fontItalic),
+            "cot" : Button(Vector2(88, 650), "cot", self.font, font_size=45),
+            "sec" : Button(Vector2(238, 650), "sec", self.font, font_size=45),
+            "csc" : Button(Vector2(388, 650), "csc", self.font, font_size=45),
 
-            "ln" : Button(Vector2(88, 800), "ln", self.fontItalic),
-            "log" : Button(Vector2(238, 800), "log", self.fontItalic),
-            "exp" : Button(Vector2(388, 800), "exp", self.fontItalic),
+            "ln" : Button(Vector2(88, 800), "ln", self.font, font_size=45),
+            "log" : Button(Vector2(238, 800), "log", self.font, font_size=45),
+            "exp" : Button(Vector2(388, 800), "exp", self.font, font_size=45),
 
-            "pi" : Button(Vector2(538, 500), "pi", self.font),
-            "e" : Button(Vector2(538, 650), "e", self.font),
-            "sqrt" : Button(Vector2(538, 800), "sqrt", self.font),
+            "pi" : Button(Vector2(538, 500), "pi", self.font, font_size=45),
+            "e" : Button(Vector2(538, 650), "e", self.font, font_size=45),
+            "**" : Button(Vector2(538, 800), "sqrt", self.font, font_size=45),
 
-            "x" : Button(Vector2(238, 950), "x", self.fontItalic),
-            "y" : Button(Vector2(388, 950), "y", self.fontItalic),
+            "." : Button(Vector2(238, 950), ".", self.font),
+            "Del" : Button(Vector2(388, 950), "Del", self.font, font_size=45),
         }
+     
+
+        self.button_modes = {
+            "BASE" : Button(Vector2(95, 95), "B", self.font, font_size=35, width=50, height=50, roundness=0.5),
+            "INVERSE" : Button(Vector2(155, 95), "A", self.font, font_size=35, width=50, height=50, roundness=0.5),
+            "HYPERBOLA" : Button(Vector2(215, 95), "H", self.font, font_size=35, width=50, height=50, roundness=0.5),
+
+            "HOMO" : Button(Vector2(550, 95), "H", self.font, font_size=35, width=50, height=50, roundness=0.5),
+            "EXACT" : Button(Vector2(610, 95), "E", self.font, font_size=35, width=50, height=50, roundness=0.5),
+        }
+
+        self.button_modes["HOMO"].is_active = True
+        self.button_modes["BASE"].is_active = True
 
         # special buttons
         self.more_button = Button(Vector2(88, 950), "...", self.font)
@@ -243,7 +265,15 @@ class Window:
 
         self.in_base_page = True
 
+        self.input = ""
+
     def draw_contents(self):
+
+        if is_key_down(KeyboardKey.KEY_RIGHT):
+            self.camera.offset.x -= 2
+
+        elif is_key_down(KeyboardKey.KEY_LEFT):
+            self.camera.offset.x += 2
        
         draw_rectangle_rounded(Rectangle(50, 75, 650, 1050), 0.1, 0, fade(MATTE_BLACK, 0.15))
         # draw_rectangle_rounded(Rectangle(50, 75, 650, 1050), 0.1, 0, fade(RAYWHITE, 0.45))
@@ -251,9 +281,8 @@ class Window:
         if self.in_base_page:
             for key, button in self.buttons.items():
                 if button.is_clicked():
-                    match key:
-                        case "...":
-                            pass
+                    self.input += key
+                            
                             
                 button.draw(self.is_buttons_shriking, self.is_buttons_expanding)
 
@@ -270,7 +299,8 @@ class Window:
             for key, button in self.next_buttons.items():
                 if button.is_clicked():
                     match key:
-                        case "...":
+                        case "Del":
+                            self.input = self.input[:-1]
                             pass
 
                 button.draw(self.is_buttons_shriking, self.is_buttons_expanding)
@@ -283,6 +313,32 @@ class Window:
             if all(button.width >= 125 for button in self.next_buttons.values()) and not self.is_buttons_shriking and self.is_buttons_expanding:
                 self.is_buttons_expanding = False
                 self.in_base_page = not self.in_base_page
+
+        for key, button in self.button_modes.items():
+                if button.is_clicked():
+                    match key:
+                        case "BASE":
+                            button.is_active = True
+                            self.button_modes["INVERSE"].is_active = False
+                            self.button_modes["HYPERBOLA"].is_active = False
+                        case "INVERSE":
+                            button.is_active = True
+                            self.button_modes["BASE"].is_active = False
+                            self.button_modes["HYPERBOLA"].is_active = False
+                        case "HYPERBOLA":
+                            button.is_active = True
+                            self.button_modes["BASE"].is_active = False
+                            self.button_modes["INVERSE"].is_active = False
+
+                        case "HOMO":
+                            button.is_active = True
+                            self.button_modes["EXACT"].is_active = False
+
+                        case "EXACT":
+                            button.is_active = True
+                            self.button_modes["HOMO"].is_active = False
+                
+                button.draw()
 
         # buttons flipping animation too too
         if self.is_buttons_shriking and not self.is_buttons_expanding:
@@ -302,6 +358,39 @@ class Window:
         if self.more_button.is_clicked():
             if not self.is_buttons_shriking and not self.is_buttons_expanding:
                 self.is_buttons_shriking = True
+
+
+        
+        screen_rect = Rectangle(100, 165, 550, 150)
+        draw_rectangle_rounded(screen_rect, 0.1, 0, fade(MATTE_BLACK, 0.1))
+
+        # Begin scissor mode to clip text outside the rectangle bounds
+        begin_scissor_mode(int(screen_rect.x), int(screen_rect.y), int(screen_rect.width), int(screen_rect.height))
+
+        # Use Camera2D to handle text scrolling
+        begin_mode_2d(self.camera)
+
+        # Measure the width of the full input text
+        text_width = measure_text_ex(self.font, self.input, 85, 0).x
+        max_visible_width = screen_rect.width - 30  # Leave padding on the sides
+
+        # Dynamically adjust the text position
+        if text_width <= max_visible_width:
+            # Text fits within the screen: Align to the right
+            text_x = screen_rect.x + screen_rect.width - 30 - text_width
+        else:
+            # Text overflows: Move the text to the left as it grows
+            overflow_offset = text_width - max_visible_width  # Calculate overflow offset
+            text_x = screen_rect.x + screen_rect.width - 30 - max_visible_width - overflow_offset
+
+        # Draw the text at the calculated position
+        draw_text_ex(self.font, self.input, Vector2(text_x, 230), 85, 0, MATTE_BLACK)
+
+        end_mode_2d()
+
+        # End scissor mode
+        end_scissor_mode()
+
 
 
     def run(self):
@@ -326,7 +415,6 @@ class Window:
             begin_shader_mode(self.shader)
             draw_rectangle(0, 0, APP_WIDTH, APP_HEIGHT, WHITE)
             end_shader_mode()
-
             self.draw_contents()
             end_texture_mode()
 
