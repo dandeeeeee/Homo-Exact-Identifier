@@ -190,7 +190,7 @@ class Window:
 
         self.font = load_font_ex("Cubano.ttf", 320, None, 0)
         # self.font = load_font_from_memory(".ttf", font_data, len(font_data), 320, None, 0)
-        self.fontItalic = load_font_ex("Poppins-SemiBoldItalic.ttf", 320, None, 0)
+        self.fontItalic = load_font_ex("Poppins-Bold.ttf", 320, None, 0)
         # self.fontItalic = load_font_from_memory(".ttf", font_data_italic, len(font_data_italic), 320, None, 0)
 
         self.buttons = {
@@ -274,7 +274,8 @@ class Window:
 
         elif is_key_down(KeyboardKey.KEY_LEFT):
             self.camera.offset.x += 2
-       
+
+
         draw_rectangle_rounded(Rectangle(50, 75, 650, 1050), 0.1, 0, fade(MATTE_BLACK, 0.15))
         # draw_rectangle_rounded(Rectangle(50, 75, 650, 1050), 0.1, 0, fade(RAYWHITE, 0.45))
 
@@ -363,6 +364,31 @@ class Window:
         
         screen_rect = Rectangle(100, 165, 550, 150)
         draw_rectangle_rounded(screen_rect, 0.1, 0, fade(MATTE_BLACK, 0.1))
+
+        if check_collision_point_rec(get_mouse_position(), screen_rect):
+            # draw_rectangle_rounded(screen_rect, 0.1, 0, fade(MATTE_BLACK, 0.2))
+
+            # right side
+            draw_rectangle_rounded(Rectangle(100, 165, 50, 150), 0.25, 0, fade(MATTE_BLACK, 0.2))
+            # right arrow
+            draw_text_ex(self.fontItalic, "<", Vector2(110, 200), 85, 0, fade(RAYWHITE, 0.2))
+
+            if check_collision_point_rec(get_mouse_position(), Rectangle(100, 165, 50, 150)):
+                if is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
+                    self.camera.offset.x += 5
+                elif is_mouse_button_down(MouseButton.MOUSE_BUTTON_LEFT):
+                    self.camera.offset.x += 2
+
+            # left side
+            draw_rectangle_rounded(Rectangle(600, 165, 50, 150), 0.25, 0, fade(MATTE_BLACK, 0.2))
+            # left arrow
+            draw_text_ex(self.fontItalic, ">", Vector2(610, 200), 85, 0, fade(RAYWHITE, 0.2))
+
+            if check_collision_point_rec(get_mouse_position(), Rectangle(600, 165, 50, 150)):
+                if is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
+                    self.camera.offset.x -= 5
+                elif is_mouse_button_down(MouseButton.MOUSE_BUTTON_LEFT):
+                    self.camera.offset.x -= 2
 
         # Begin scissor mode to clip text outside the rectangle bounds
         begin_scissor_mode(int(screen_rect.x), int(screen_rect.y), int(screen_rect.width), int(screen_rect.height))
