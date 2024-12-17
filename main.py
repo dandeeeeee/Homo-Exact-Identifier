@@ -157,6 +157,8 @@ BUTTONS_FLIPPING_SPEED = 750
 font_data = bytes(font_hex)
 font_data_italic = bytes(font_hex_italic)
 
+from sympy import *
+
 class Window:
 
 
@@ -267,13 +269,16 @@ class Window:
 
         self.input = ""
 
+
+
+
     def draw_contents(self):
 
         if is_key_down(KeyboardKey.KEY_RIGHT):
-            self.camera.offset.x -= 2
+            self.camera.offset.x -= 5
 
         elif is_key_down(KeyboardKey.KEY_LEFT):
-            self.camera.offset.x += 2
+            self.camera.offset.x += 5
 
 
         draw_rectangle_rounded(Rectangle(50, 75, 650, 1050), 0.1, 0, fade(MATTE_BLACK, 0.15))
@@ -282,7 +287,14 @@ class Window:
         if self.in_base_page:
             for key, button in self.buttons.items():
                 if button.is_clicked():
-                    self.input += key
+                    self.camera.offset = Vector2(360, 240)
+                    if key != "Del" and key != "C": self.input += key
+                    match key:
+                        case "Del":
+                            self.input = self.input[:-1]
+
+                        case "C":
+                            self.input = ""
                             
                             
                 button.draw(self.is_buttons_shriking, self.is_buttons_expanding)
@@ -299,10 +311,12 @@ class Window:
         else:
             for key, button in self.next_buttons.items():
                 if button.is_clicked():
+                    if button.is_clicked():
+                        self.camera.offset = Vector2(360, 240)
+                        if key != "Del": self.input += key
                     match key:
                         case "Del":
                             self.input = self.input[:-1]
-                            pass
 
                 button.draw(self.is_buttons_shriking, self.is_buttons_expanding)
 
@@ -355,6 +369,8 @@ class Window:
 
         self.more_button.draw()
         self.equal_button.draw()
+        if self.equal_button.is_clicked():
+            self.is_exact()
 
         if self.more_button.is_clicked():
             if not self.is_buttons_shriking and not self.is_buttons_expanding:
@@ -373,11 +389,11 @@ class Window:
             # right arrow
             draw_text_ex(self.fontItalic, "<", Vector2(110, 200), 85, 0, fade(RAYWHITE, 0.2))
 
-            if check_collision_point_rec(get_mouse_position(), Rectangle(100, 165, 50, 150)):
+            if check_collision_point_rec(get_mouse_position(), Rectangle(100, 165, 50, 150)): 
                 if is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
-                    self.camera.offset.x += 5
+                    self.camera.offset.x += 10
                 elif is_mouse_button_down(MouseButton.MOUSE_BUTTON_LEFT):
-                    self.camera.offset.x += 2
+                    self.camera.offset.x += 5
 
             # left side
             draw_rectangle_rounded(Rectangle(600, 165, 50, 150), 0.25, 0, fade(MATTE_BLACK, 0.2))
@@ -386,9 +402,9 @@ class Window:
 
             if check_collision_point_rec(get_mouse_position(), Rectangle(600, 165, 50, 150)):
                 if is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
-                    self.camera.offset.x -= 5
+                    self.camera.offset.x -= 10
                 elif is_mouse_button_down(MouseButton.MOUSE_BUTTON_LEFT):
-                    self.camera.offset.x -= 2
+                    self.camera.offset.x -= 5
 
         # Begin scissor mode to clip text outside the rectangle bounds
         begin_scissor_mode(int(screen_rect.x), int(screen_rect.y), int(screen_rect.width), int(screen_rect.height))
@@ -419,6 +435,42 @@ class Window:
 
 
 
+    def is_exact(self):
+        try:
+            # Separate the expression for M and N assuming they are separated by 'D'            
+            dx = self.input[:self.input.index("DX")].strip()  # Expression for M
+            dy = self.input[len(dx)+2:self.input.index("DY")].strip()  # Expression for N
+
+            # dx = dx.replace("D", "")
+
+            print("Dx: ", dx)
+            print("Dy: ", dy)
+
+            # Convert them into symbolic expressions
+            M = sympify(dx)
+            N = sympify(dy)
+
+            x, y = symbols("x y")
+
+
+            #! Y COMES FIRST PUTANGINANG YAN INABOT PAKO NG PASKO KAKADEBUG
+            # Compute partial derivatives
+            expr1 = diff(M, y)  # dM/dx
+            expr2 = diff(N, x)  # dN/dy
+
+            print("dM/dx: ", expr1)
+            print("dN/dy: ", expr2)
+
+            # Compare the partial derivatives
+            if expr1.equals(expr2):
+                print("Exact")
+            else:
+                print("Not Exact")
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+  
     def run(self):
 
         while not window_should_close():
